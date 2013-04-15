@@ -1,0 +1,218 @@
+// JK
+// Name of file was by requested convention: ID number at the end.
+
+
+/** 
+ * The approach of this AI is to consider every possible initial move using bestMoveSearch(). That method then calls futureSight() on each
+ * potential move of the current game state (so at this point, the program is only considering its own immediate move).  The futureSight() method
+ * will recursively call itself until the value depth becomes 0, at which point it returns a score based on the number of white and black
+ * pieces on the board.  This score is passed back to the bestMoveSearch() and is recorded if it is the highest value.  Then the for loop of
+ * bestMoveSearch() continues on to the next valid move, where the process is repeated.
+ * 
+ * In this manner, the goal is to find the highest score of the final considered move, and to make the immediate move that will lead to that state.
+ * Throughout this approach, the players' turns obviously switch, and this is handled by considering the lowest score for white (assuming black
+ *  is the primary player, this makes sense, because the lowest score would mean the most detrimental for black, and theoretically that is what 
+ *  white should be aiming for).
+ * 
+ * */
+
+
+public class OthelloAI71903694 implements OthelloAI
+{
+  public final static int NUMBER_OF_ROWS = 8;
+	public final static int NUMBER_OF_COLUMNS = 8;
+	
+	private int bestMoveRow = -1;
+	private int bestMoveCol = -1;
+	private int bestMoveScore = -65; 		// max score is (rows)(columns) = 8 * 8 = 64.   Used for evaluation of game states.
+	
+	private int worstMoveRow = -1;
+	private int worstMoveCol = -1;
+	private int worstMoveScore = 65; 		// max score is (rows)(columns) = 8 * 8 = 64.   Used for evaluation of game states.
+	
+	private int originalDepth = 4; 		    // the starting depth that is searched
+	private OthelloGameState originalState;
+	
+	
+	public OthelloMove chooseMove(OthelloGameState state)
+	{
+		originalState = state;
+		bestMoveSearch(state, originalDepth);   // finds the best possible move
+		if (state.isBlackTurn())
+		{
+			return new OthelloMove(bestMoveRow, bestMoveCol);
+		}
+		else
+		{
+			return new OthelloMove(worstMoveRow, worstMoveCol);
+		}
+	}
+	
+	
+	private int evaluate(OthelloGameState state) // an evaluation method for the current board state
+	{
+		return (state.getBlackScore() - state.getWhiteScore());
+	}
+	
+	
+	private boolean thisIsACorner(int row, int column) // a simple method to check if a possible move is a corner (approach is to go for corners)
+	{
+		if ( ((row == 0) && (column == 0)) || ((row == 0) && (column == 7)) ||
+			 ((row == 7) && (column == 0)) || ((row == 7) && (column == 7)) )
+		{
+			return true;
+		}
+		
+		else
+		{
+			return false;
+		}
+	}
+	
+	
+	
+	private void bestMoveSearch(OthelloGameState s, int depth)  // this method looks at each possible move, then calls the futureSight() method
+	{
+		OthelloGameState state = originalState;
+		
+		
+			if (state.isBlackTurn())
+			{
+				int bestFirstMoveScore = -65; // max score is (rows)(columns) = 8 * 8 = 64
+				
+				for (int r = 0; r < NUMBER_OF_ROWS; r++)
+				{											// loops to consider all moves
+					for (int c = 0; c < NUMBER_OF_COLUMNS; c++)
+					{
+						if (state.isValidMove(r, c))   // a filter to consider only valid moves
+						{
+							if (thisIsACorner(r, c))  // checks if the move is a corner, and if so, the corner is picked as the best move
+							{
+								bestMoveRow = r;
+								bestMoveCol = c;
+								return;
+							}
+							
+							OthelloGameState newState = state.clone();
+							newState.makeMove(r, c);
+							int bestPotentialScore = futureSight(newState, depth);  // obtains the score of the farthest ahead move for 
+																					// the current coordinates bestMoveSearch() is on
+							
+							if (bestPotentialScore > bestFirstMoveScore)
+							{
+								bestFirstMoveScore = evaluate(newState);
+								bestMoveRow = r;
+								bestMoveCol = c;
+							}
+						}
+					}
+				}
+				return;
+			}
+
+			else
+			{
+				int worstFirstMoveScore = 65; // max score is (rows)(columns) = 8 * 8 = 64
+
+				for (int r = 0; r < NUMBER_OF_ROWS; r++)
+				{										// loops to consider all moves
+					for (int c = 0; c < NUMBER_OF_COLUMNS; c++)
+					{
+						if (state.isValidMove(r, c))  // a filter to consider only valid moves
+						{
+							if (thisIsACorner(r, c))  // checks if the move is a corner, and if so, the corner is picked as the best move
+							{
+								worstMoveRow = r;
+								worstMoveCol = c;
+								return;
+							}
+							
+							OthelloGameState newState = state.clone();
+							newState.makeMove(r, c);
+							futureSight(newState, depth);
+
+							int worstPotentialScore = futureSight(newState, depth);   // obtains the score of the farthest ahead move for 
+																					  // the current coordinates bestMoveSearch() is on
+							
+							
+							if (worstPotentialScore < worstFirstMoveScore)
+							{
+								worstFirstMoveScore = evaluate(newState);
+								worstMoveRow = r;
+								worstMoveCol = c;
+							}
+						}
+					}
+				}
+				return;
+			}
+		}
+
+
+	
+	// the futureSight method returns the max/min score after considering several moves ahead.  This method looks somewhat similar to 
+	// bestMoveSearch(), but is designed to be recursive and it only considers the score based on the final move (determined by the value
+	//  of depth)
+	private int futureSight(OthelloGameState s, int depth)
+	{
+		OthelloGameState state = s;
+
+		if (depth == 0)
+		{
+			if (state.isBlackTurn())
+			{
+				if (evaluate(state) > bestMoveScore)
+				{
+					bestMoveScore = evaluate(state);
+				}
+			}
+			else // must be white's turn
+			{
+				if (evaluate(state) < worstMoveScore)
+				{
+					worstMoveScore = evaluate(state);
+				}
+			}
+
+			return evaluate(state);
+		}
+		
+		if (state.isBlackTurn())
+		{
+			
+			for (int r = 0; r < NUMBER_OF_ROWS; r++)
+			{
+				for (int c = 0; c < NUMBER_OF_COLUMNS; c++)
+				{
+					if (state.isValidMove(r, c))
+					{
+						OthelloGameState newState = state.clone();
+						newState.makeMove(r, c);	
+						futureSight(newState, (depth - 1));		// recursively calls futureSight() until depth is 0, 
+																// at which point the score of the board is returned.
+					}
+				}
+			}
+			return bestMoveScore;
+		}
+
+		
+		else //it must be white's turn
+		{
+			for (int r = 0; r < NUMBER_OF_ROWS; r++)
+			{
+				for (int c = 0; c < NUMBER_OF_COLUMNS; c++)
+				{
+					if (state.isValidMove(r, c))
+					{
+						OthelloGameState newState = state.clone();
+						newState.makeMove(r, c);
+						futureSight(newState, (depth - 1));   	// recursively calls futureSight() until depth is 0, 
+																// at which point the score of the board is returned.
+					}
+				}
+			}
+			return worstMoveScore;
+		}
+	}
+}
